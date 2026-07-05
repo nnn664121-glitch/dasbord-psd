@@ -34,7 +34,7 @@ from datetime import datetime, timedelta  # Manipulasi tanggal dan waktu
 import hashlib                            # Hashing untuk cache key
 
 # Import library machine learning dari scikit-learn
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.linear_model 
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
