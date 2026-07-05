@@ -1,7 +1,7 @@
 # ============================================================================
 # app.py - DASBOR INTERAKTIF PRODUKSI TANAMAN PERKEBUNAN INDONESIA
 # Tugas UAS Visualisasi Data - Tema: Sains Data & Pertanian Indonesia
-# VERSI FINAL: Fully tested, compatible dengan Python 3.10+ dan Plotly terbaru
+# VERSI FINAL 4.0 - FIXED: SyntaxError f-string triple-quoted
 # ============================================================================
 
 # ============================================================
@@ -34,7 +34,8 @@ try:
     from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
-    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
+    from sklearn.metrics import (mean_absolute_error, mean_squared_error, 
+                                 r2_score, mean_absolute_percentage_error)
     SKLEARN_OK = True
 except Exception:
     SKLEARN_OK = False
@@ -51,6 +52,7 @@ except Exception:
 # BAGIAN 3: IMPLEMENTASI MANUAL (FALLBACK)
 # ============================================================
 class ManualLinearRegression:
+    """Regresi Linier manual dengan OLS."""
     def __init__(self):
         self.coef_ = None
         self.intercept_ = None
@@ -70,6 +72,7 @@ class ManualLinearRegression:
 
 
 class ManualRidge(ManualLinearRegression):
+    """Ridge Regression manual dengan regularisasi L2."""
     def __init__(self, alpha=1.0):
         super().__init__()
         self.alpha = alpha
@@ -77,7 +80,7 @@ class ManualRidge(ManualLinearRegression):
     def fit(self, X, y):
         X_b = np.c_[np.ones((X.shape[0], 1)), X]
         reg = self.alpha * np.eye(X.shape[1] + 1)
-        reg[0, 0] = 0
+        reg[0, 0] = 0  # Jangan regularisasi intercept
         theta = np.linalg.pinv(X_b.T @ X_b + reg) @ X_b.T @ y
         self.intercept_ = theta[0]
         self.coef_ = theta[1:]
@@ -85,6 +88,7 @@ class ManualRidge(ManualLinearRegression):
 
 
 class ManualStandardScaler:
+    """Standard Scaler manual."""
     def __init__(self):
         self.mean_ = None
         self.scale_ = None
@@ -103,14 +107,20 @@ class ManualStandardScaler:
         return self.transform(X)
 
 
-def manual_mae(y, yp): return np.mean(np.abs(y - yp))
-def manual_rmse(y, yp): return np.sqrt(np.mean((y - yp) ** 2))
+def manual_mae(y, yp): 
+    return np.mean(np.abs(y - yp))
+
+def manual_rmse(y, yp): 
+    return np.sqrt(np.mean((y - yp) ** 2))
+
 def manual_r2(y, yp):
     ss_res = np.sum((y - yp) ** 2)
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     return 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+
 def manual_mape(y, yp):
     return np.mean(np.abs((y - yp) / (np.abs(y) + 1e-8))) * 100
+
 def manual_pearson(x, y):
     n = len(x)
     num = n * np.sum(x * y) - np.sum(x) * np.sum(y)
@@ -118,6 +128,7 @@ def manual_pearson(x, y):
     return (num / den, 0.05) if den != 0 else (0.0, 1.0)
 
 
+# Pilih implementasi yang tersedia
 if SKLEARN_OK:
     LinReg = LinearRegression
     RidgReg = lambda alpha=1.0: Ridge(alpha=alpha)
@@ -151,10 +162,10 @@ else:
 
 
 # ============================================================
-# BAGIAN 4: KONFIGURASI HALAMAN
+# BAGIAN 4: KONFIGURASI HALAMAN STREAMLIT
 # ============================================================
 st.set_page_config(
-    page_title="🌿 Dasbor Produksi Perkebunan Indonesia",
+    page_title="Dasbor Produksi Perkebunan Indonesia",
     page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -162,20 +173,12 @@ st.set_page_config(
 
 
 # ============================================================
-# BAGIAN 5: CSS KUSTOM
+# BAGIAN 5: CSS KUSTOM (DARK AGRICULTURE THEME)
 # ============================================================
-st.markdown("""
+CSS_KUSTOM = """
 <style>
     @import url('https://cdn.jsdelivr.net/npm/@fontsource/poppins@5.0.0/index.min.css');
     @import url('https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/index.min.css');
-    
-    :root {
-        --bg-dark: #0a1f14;
-        --emerald: #2ecc71;
-        --emerald-light: #58d68d;
-        --gold: #f1c40f;
-        --text-primary: #e8f5e9;
-    }
     
     .stApp {
         background: linear-gradient(135deg, #0a1f14 0%, #0f2a1c 50%, #1a1a2e 100%);
@@ -198,12 +201,6 @@ st.markdown("""
         text-align: center;
         margin-bottom: 10px;
         font-family: 'Poppins', sans-serif;
-        animation: shimmer 3s linear infinite;
-    }
-    
-    @keyframes shimmer {
-        0% { background-position: 0% center; }
-        100% { background-position: 200% center; }
     }
     
     .sub-title {
@@ -314,45 +311,41 @@ st.markdown("""
         border-radius: 15px;
     }
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(CSS_KUSTOM, unsafe_allow_html=True)
 
 
 # ============================================================
 # BAGIAN 6: KONSTANTA GLOBAL
 # ============================================================
-APP_VERSION = "3.0.0 (Final)"
+APP_VERSION = "4.0.0 (Final Fixed)"
 APP_YEAR = 2026
 
 KOMODITAS = ['Kelapa_Sawit', 'Kelapa', 'Karet', 'Kopi', 'Kakao', 'Teh', 'Tebu']
 
 LABEL_KOMODITAS = {
-    'Kelapa_Sawit': '🌴 Kelapa Sawit',
-    'Kelapa': '🥥 Kelapa',
-    'Karet': '🌳 Karet',
-    'Kopi': '☕ Kopi',
-    'Kakao': '🍫 Kakao',
-    'Teh': '🍵 Teh',
-    'Tebu': '🎋 Tebu'
+    'Kelapa_Sawit': 'Kelapa Sawit',
+    'Kelapa': 'Kelapa',
+    'Karet': 'Karet',
+    'Kopi': 'Kopi',
+    'Kakao': 'Kakao',
+    'Teh': 'Teh',
+    'Tebu': 'Tebu'
+}
+
+EMOJI_KOMODITAS = {
+    'Kelapa_Sawit': '🌴', 'Kelapa': '🥥', 'Karet': '🌳',
+    'Kopi': '☕', 'Kakao': '🍫', 'Teh': '🍵', 'Tebu': '🎋'
 }
 
 WARNA_KOMODITAS = {
-    'Kelapa_Sawit': '#f39c12',
-    'Kelapa': '#8d6e63',
-    'Karet': '#5d4037',
-    'Kopi': '#4e342e',
-    'Kakao': '#6d4c41',
-    'Teh': '#2e7d32',
-    'Tebu': '#9ccc65'
+    'Kelapa_Sawit': '#f39c12', 'Kelapa': '#8d6e63', 'Karet': '#5d4037',
+    'Kopi': '#4e342e', 'Kakao': '#6d4c41', 'Teh': '#2e7d32', 'Tebu': '#9ccc65'
 }
 
 WARNA_WILAYAH = {
-    'Sumatera': '#2ecc71',
-    'Jawa': '#f1c40f',
-    'Bali & Nusa Tenggara': '#e67e22',
-    'Kalimantan': '#27ae60',
-    'Sulawesi': '#16a085',
-    'Maluku': '#3498db',
-    'Papua': '#9b59b6'
+    'Sumatera': '#2ecc71', 'Jawa': '#f1c40f', 'Bali & Nusa Tenggara': '#e67e22',
+    'Kalimantan': '#27ae60', 'Sulawesi': '#16a085', 'Maluku': '#3498db', 'Papua': '#9b59b6'
 }
 
 KOORDINAT_PROVINSI = {
@@ -382,6 +375,7 @@ KOORDINAT_PROVINSI = {
 # BAGIAN 7: FUNGSI HELPER
 # ============================================================
 def klasifikasi_wilayah(nama):
+    """Mengelompokkan provinsi ke wilayah geografis."""
     nama = str(nama).upper().strip()
     if any(k in nama for k in ['ACEH', 'SUMATERA', 'RIAU', 'JAMBI', 'BENGKULU', 'LAMPUNG', 'BANGKA', 'KEP. RIAU']):
         return 'Sumatera'
@@ -401,36 +395,47 @@ def klasifikasi_wilayah(nama):
 
 
 def format_angka(n, dec=0):
+    """Format angka dengan separator Indonesia."""
     try:
-        if pd.isna(n): return "N/A"
-        if dec == 0: return f"{int(n):,}".replace(',', '.')
+        if pd.isna(n): 
+            return "N/A"
+        if dec == 0: 
+            return f"{int(n):,}".replace(',', '.')
         return f"{n:,.{dec}f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-    except: return "N/A"
+    except:
+        return "N/A"
 
 
 def format_besar(n):
+    """Format angka besar dengan suffix."""
     try:
-        if pd.isna(n): return "N/A"
+        if pd.isna(n): 
+            return "N/A"
         a = abs(n)
         if a >= 1e9: return f"{n/1e9:.2f}B"
         if a >= 1e6: return f"{n/1e6:.2f}M"
         if a >= 1e3: return f"{n/1e3:.1f}K"
         return f"{n:.1f}"
-    except: return "N/A"
+    except:
+        return "N/A"
 
 
 def hitung_gini(series):
+    """Menghitung Koefisien Gini."""
     try:
         s = series.sort_values().reset_index(drop=True)
         n = len(s)
-        if s.sum() == 0 or n == 0: return 0.0
+        if s.sum() == 0 or n == 0: 
+            return 0.0
         c = s.cumsum()
         g = (2 * np.sum((np.arange(1, n + 1) * s)) / (n * c.iloc[-1])) - (n + 1) / n
         return max(0, min(1, g))
-    except: return 0.5
+    except:
+        return 0.5
 
 
 def interpretasi_korelasi(r):
+    """Interpretasi kekuatan korelasi."""
     a = abs(r)
     if a < 0.3: return "Sangat Lemah"
     if a < 0.5: return "Lemah"
@@ -440,61 +445,113 @@ def interpretasi_korelasi(r):
 
 
 def interpretasi_r2(r2):
-    if r2 > 0.7: return "🌟 Sangat Baik"
-    if r2 > 0.5: return "✅ Baik"
-    if r2 > 0.3: return "⚠️ Cukup"
-    if r2 > 0.1: return "❌ Lemah"
-    return "❌ Sangat Lemah"
+    """Interpretasi R-squared."""
+    if r2 > 0.7: return "Sangat Baik"
+    if r2 > 0.5: return "Baik"
+    if r2 > 0.3: return "Cukup"
+    if r2 > 0.1: return "Lemah"
+    return "Sangat Lemah"
 
 
 def apply_tema(fig, title="", height=550):
+    """Terapkan tema dark modern ke Plotly figure."""
     fig.update_layout(
         paper_bgcolor="rgba(0, 0, 0, 0)",
         plot_bgcolor="rgba(10, 31, 20, 0.4)",
         font=dict(family="Inter, sans-serif", color="#e8f5e9", size=13),
-        title=dict(text=title, font=dict(size=18, color="#58d68d", family="Poppins"), x=0.5, xanchor="center"),
+        title=dict(text=title, font=dict(size=18, color="#58d68d", family="Poppins"), 
+                   x=0.5, xanchor="center"),
         height=height,
         margin=dict(l=40, r=40, t=60, b=50),
         hoverlabel=dict(bgcolor="#0f2a1c", font_size=13, bordercolor="#2ecc71"),
-        legend=dict(bgcolor="rgba(15, 42, 28, 0.8)", bordercolor="#2ecc71", borderwidth=1, font=dict(color="#e8f5e9"))
+        legend=dict(bgcolor="rgba(15, 42, 28, 0.8)", bordercolor="#2ecc71", 
+                    borderwidth=1, font=dict(color="#e8f5e9"))
     )
     try:
         if fig.layout.scene is not None:
             fig.update_layout(
                 scene=dict(
-                    xaxis=dict(backgroundcolor="rgb(10, 31, 20)", gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9", title_font=dict(color="#2ecc71")),
-                    yaxis=dict(backgroundcolor="rgb(10, 31, 20)", gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9", title_font=dict(color="#2ecc71")),
-                    zaxis=dict(backgroundcolor="rgb(10, 31, 20)", gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9", title_font=dict(color="#f1c40f"))
+                    xaxis=dict(backgroundcolor="rgb(10, 31, 20)", 
+                              gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9",
+                              title_font=dict(color="#2ecc71")),
+                    yaxis=dict(backgroundcolor="rgb(10, 31, 20)", 
+                              gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9",
+                              title_font=dict(color="#2ecc71")),
+                    zaxis=dict(backgroundcolor="rgb(10, 31, 20)", 
+                              gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9",
+                              title_font=dict(color="#f1c40f"))
                 )
             )
-    except: pass
+    except:
+        pass
     return fig
 
 
 def buat_kartu(icon, nilai, label, sub=""):
-    s = f'<div style="font-size:0.85em;color:#58d68d;margin-top:8px;">{sub}</div>' if sub else ""
-    return f'''<div class="metric-card">
-        <div class="metric-icon">{icon}</div>
-        <div class="metric-value">{nilai}</div>
-        <div class="metric-label">{label}</div>{s}
-    </div>'''
+    """Buat HTML kartu metrik."""
+    sub_html = '<div style="font-size:0.85em;color:#58d68d;margin-top:8px;">' + sub + '</div>' if sub else ""
+    html = '<div class="metric-card">'
+    html += '<div class="metric-icon">' + str(icon) + '</div>'
+    html += '<div class="metric-value">' + str(nilai) + '</div>'
+    html += '<div class="metric-label">' + str(label) + '</div>'
+    html += sub_html
+    html += '</div>'
+    return html
+
+
+def buat_insight_box(nomor, judul, isi):
+    """Buat HTML kotak insight (tanpa f-string untuk hindari error)."""
+    html = '<div class="insight-box">'
+    html += '<strong>Insight #' + str(nomor) + ': ' + str(judul) + '</strong>'
+    html += '<p style="margin:8px 0 0 0;">' + str(isi) + '</p>'
+    html += '</div>'
+    return html
+
+
+def buat_recommend_box(nomor, judul, isi):
+    """Buat HTML kotak rekomendasi."""
+    html = '<div class="recommend-box">'
+    html += '<strong>Rekomendasi #' + str(nomor) + ': ' + str(judul) + '</strong>'
+    html += '<p style="margin:8px 0 0 0;">' + str(isi) + '</p>'
+    html += '</div>'
+    return html
+
+
+def buat_page_header(emoji, judul, deskripsi):
+    """Buat header halaman."""
+    html = '<div class="page-header">'
+    html += '<h2>' + str(emoji) + ' ' + str(judul) + '</h2>'
+    html += '<p>' + str(deskripsi) + '</p>'
+    html += '</div>'
+    return html
+
+
+def buat_info_box(isi):
+    """Buat info box."""
+    return '<div class="info-box">' + str(isi) + '</div>'
+
+
+def buat_warning_box(isi):
+    """Buat warning box."""
+    return '<div class="warning-box">' + str(isi) + '</div>'
 
 
 # ============================================================
 # BAGIAN 8: LOAD DATA
 # ============================================================
-@st.cache_data(show_spinner="📂 Memuat data...")
+@st.cache_data(show_spinner="Memuat data...")
 def muat_data():
+    """Load dan preprocess dataset."""
     try:
         df_raw = pd.read_csv("produksi_tanaman.csv")
     except Exception as e:
-        return None, None, f"❌ Error membaca CSV: {str(e)}"
+        return None, None, "Error membaca CSV: " + str(e)
     
     if df_raw.empty:
-        return None, None, "❌ File kosong"
+        return None, None, "File kosong"
     
     if 'Provinsi' not in df_raw.columns:
-        return None, None, "❌ Kolom 'Provinsi' tidak ditemukan"
+        return None, None, "Kolom Provinsi tidak ditemukan"
     
     df = df_raw.copy()
     df['Wilayah'] = df['Provinsi'].apply(klasifikasi_wilayah)
@@ -518,10 +575,10 @@ def muat_data():
     df['HHI_Index'] = df['Provinsi'].map(hhi)
     
     def div_cat(h):
-        if h < 0.20: return "🌈 Diversifikasi Tinggi"
-        if h < 0.35: return "⚖️ Diversifikasi Sedang"
-        if h < 0.55: return "🎯 Konsentrasi Tinggi"
-        return "🔴 Sangat Terkonsentrasi"
+        if h < 0.20: return "Diversifikasi Tinggi"
+        if h < 0.35: return "Diversifikasi Sedang"
+        if h < 0.55: return "Konsentrasi Tinggi"
+        return "Sangat Terkonsentrasi"
     
     df['Diversifikasi'] = df['HHI_Index'].apply(div_cat)
     
@@ -531,23 +588,25 @@ def muat_data():
 df_raw, df, err = muat_data()
 if err:
     st.error(err)
-    st.info("Pastikan file `produksi_tanaman.csv` ada di folder yang sama dengan `app.py`")
+    st.info("Pastikan file produksi_tanaman.csv ada di folder yang sama dengan app.py")
     st.stop()
 
 
 # ============================================================
-# BAGIAN 9: SIDEBAR
+# BAGIAN 9: SIDEBAR NAVIGASI
 # ============================================================
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align: center; padding: 15px 0 20px 0; border-bottom: 2px solid rgba(46, 204, 113, 0.4);">
+    sidebar_branding = """
+    <div style="text-align: center; padding: 15px 0 20px 0; 
+                border-bottom: 2px solid rgba(46, 204, 113, 0.4);">
         <div style="font-size: 2.5em;">🌿🌾🌴</div>
         <div style="color: #58d68d; font-size: 1.05em; font-weight: 700; margin-top: 8px;">
             DASHBOARD PERKEBUNAN
         </div>
         <div style="color: #f7dc6f; font-size: 0.85em;">Indonesia 🇮🇩</div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(sidebar_branding, unsafe_allow_html=True)
     
     st.markdown("### 🧭 Navigasi")
     menu = [
@@ -564,49 +623,67 @@ with st.sidebar:
     page = st.radio("Pilih:", menu, index=0, label_visibility="collapsed")
     
     st.markdown("---")
-    st.markdown(f"""
-    <div style="background:rgba(46,204,113,0.1);padding:15px;border-radius:12px;border:1px solid rgba(46,204,113,0.3);">
-        <p><b>🏛️ Provinsi:</b> {len(df)}</p>
-        <p><b>🌿 Komoditas:</b> {len(KOMODITAS)}</p>
-        <p><b>🌾 Total:</b> {format_besar(df['Total_Produksi'].sum())}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    info_sidebar = '<div style="background:rgba(46,204,113,0.1);padding:15px;border-radius:12px;border:1px solid rgba(46,204,113,0.3);">'
+    info_sidebar += '<p><b>🏛️ Provinsi:</b> ' + str(len(df)) + '</p>'
+    info_sidebar += '<p><b>🌿 Komoditas:</b> ' + str(len(KOMODITAS)) + '</p>'
+    info_sidebar += '<p><b>🌾 Total:</b> ' + format_besar(df['Total_Produksi'].sum()) + '</p>'
+    info_sidebar += '</div>'
+    st.markdown(info_sidebar, unsafe_allow_html=True)
     
     st.markdown("---")
     lib_status = ""
-    lib_status += '<span class="status-badge badge-ok">✅ sklearn</span> ' if SKLEARN_OK else '<span class="status-badge badge-warn">⚠️ sklearn manual</span> '
-    lib_status += '<span class="status-badge badge-ok">✅ scipy</span>' if SCIPY_OK else '<span class="status-badge badge-warn">⚠️ scipy manual</span>'
-    st.markdown(f"### 🔧 Status\n<div>{lib_status}</div>", unsafe_allow_html=True)
+    if SKLEARN_OK:
+        lib_status += '<span class="status-badge badge-ok">✅ sklearn</span> '
+    else:
+        lib_status += '<span class="status-badge badge-warn">⚠️ sklearn manual</span> '
+    
+    if SCIPY_OK:
+        lib_status += '<span class="status-badge badge-ok">✅ scipy</span>'
+    else:
+        lib_status += '<span class="status-badge badge-warn">⚠️ scipy manual</span>'
+    
+    st.markdown("### 🔧 Status")
+    st.markdown('<div>' + lib_status + '</div>', unsafe_allow_html=True)
 
 
 # ============================================================
-# BAGIAN 10: HEADER
+# BAGIAN 10: HEADER UTAMA
 # ============================================================
 st.markdown('<h1 class="main-title">🌿 Dasbor Produksi Perkebunan Indonesia</h1>', unsafe_allow_html=True)
-st.markdown(f'<p class="sub-title">🎓 Tugas UAS Visualisasi Data • {APP_YEAR}</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">🎓 Tugas UAS Visualisasi Data • ' + str(APP_YEAR) + '</p>', unsafe_allow_html=True)
 
 
 # ============================================================
-# BERANDA
+# HALAMAN: BERANDA
 # ============================================================
 if page == "🏠 Beranda":
-    st.markdown("""
-    <div class="page-header">
-        <h2>🌾 Selamat Datang di Dasbor Analisis Perkebunan Indonesia</h2>
-        <p>Analisis komprehensif 38 provinsi dengan visualisasi 3D modern</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "🌾", 
+        "Selamat Datang di Dasbor Analisis Perkebunan Indonesia",
+        "Analisis komprehensif 38 provinsi dengan visualisasi 3D modern"
+    ), unsafe_allow_html=True)
     
-    c1, c2, c3, c4 = st.columns(4)
+    # Metrik utama
     total_semua = df[KOMODITAS].sum().sum()
     top_prov = df.loc[df['Total_Produksi'].idxmax(), 'Provinsi']
     top_val = df['Total_Produksi'].max()
     gini = hitung_gini(df['Total_Produksi'])
     
-    with c1: st.markdown(buat_kartu("🌾", format_angka(total_semua), "TOTAL PRODUKSI", "ribu ton"), unsafe_allow_html=True)
-    with c2: st.markdown(buat_kartu("🏆", top_prov[:15], "TOP PROVINSI", format_besar(top_val)), unsafe_allow_html=True)
-    with c3: st.markdown(buat_kartu("🗺️", str(df['Wilayah'].nunique()), "WILAYAH", "Geografis"), unsafe_allow_html=True)
-    with c4: st.markdown(buat_kartu("⚖️", f"{gini:.2f}", "GINI INDEX", "Ketimpangan"), unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(buat_kartu("🌾", format_angka(total_semua), "TOTAL PRODUKSI", "ribu ton"), 
+                    unsafe_allow_html=True)
+    with c2:
+        st.markdown(buat_kartu("🏆", top_prov[:15], "TOP PROVINSI", format_besar(top_val)), 
+                    unsafe_allow_html=True)
+    with c3:
+        st.markdown(buat_kartu("🗺️", str(df['Wilayah'].nunique()), "WILAYAH", "Geografis"), 
+                    unsafe_allow_html=True)
+    with c4:
+        gini_label = "Timpang" if gini > 0.5 else ("Sedang" if gini > 0.3 else "Merata")
+        st.markdown(buat_kartu("⚖️", f"{gini:.2f}", "GINI INDEX", gini_label), 
+                    unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -622,28 +699,31 @@ if page == "🏠 Beranda":
     st.plotly_chart(fig_tm, use_container_width=True)
     
     st.markdown("---")
-    st.markdown("""
-    <div class="info-box">
-        <b>📖 Navigasi:</b> Gunakan sidebar untuk menjelajahi 7 halaman analisis.
-        <ul>
-            <li>📊 Overview & Data Understanding</li>
-            <li>🧹 Data Cleaning</li>
-            <li>📈 EDA dengan 4 visualisasi 3D</li>
-            <li>🗺️ Peta Indonesia Interaktif</li>
-            <li>🔗 Korelasi & Regresi</li>
-            <li>🤖 ML Lanjutan</li>
-            <li>💡 Insights & Rekomendasi</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    info_navigasi = """
+    <b>📖 Navigasi:</b> Gunakan sidebar untuk menjelajahi 7 halaman analisis.
+    <ul>
+        <li>📊 Overview & Data Understanding</li>
+        <li>🧹 Data Cleaning</li>
+        <li>📈 EDA dengan 4 visualisasi 3D</li>
+        <li>🗺️ Peta Indonesia Interaktif</li>
+        <li>🔗 Korelasi & Regresi</li>
+        <li>🤖 ML Lanjutan</li>
+        <li>💡 Insights & Rekomendasi</li>
+    </ul>
+    """
+    st.markdown(buat_info_box(info_navigasi), unsafe_allow_html=True)
 
 
 # ============================================================
-# PAGE 1: OVERVIEW
+# HALAMAN: PAGE 1 - OVERVIEW
 # ============================================================
 elif page == "📊 Page 1: Overview":
-    st.markdown('<div class="page-header"><h2>📊 Overview & Data Understanding</h2><p>Gambaran umum dataset</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "📊", "Overview & Data Understanding", "Gambaran umum dataset"
+    ), unsafe_allow_html=True)
     
+    # KPI per komoditas
     total_sawit = df['Kelapa_Sawit'].sum()
     total_karet = df['Karet'].sum()
     total_kopi = df['Kopi'].sum()
@@ -654,12 +734,38 @@ elif page == "📊 Page 1: Overview":
     total_semua = df['Total_Produksi'].sum()
     
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(buat_kartu("🌾", format_angka(total_semua), "TOTAL", "ribu ton"), unsafe_allow_html=True)
-    with c2: st.markdown(buat_kartu("🌴", format_angka(total_sawit), "SAWIT", f"{total_sawit/total_semua*100:.1f}%"), unsafe_allow_html=True)
-    with c3: st.markdown(buat_kartu("🌳", format_angka(total_karet), "KARET", f"{total_karet/total_semua*100:.1f}%"), unsafe_allow_html=True)
-    with c4: st.markdown(buat_kartu("☕", format_angka(total_kopi), "KOPI", f"{total_kopi/total_semua*100:.1f}%"), unsafe_allow_html=True)
+    with c1:
+        st.markdown(buat_kartu("🌾", format_angka(total_semua), "TOTAL", "ribu ton"), 
+                    unsafe_allow_html=True)
+    with c2:
+        pct = (total_sawit/total_semua*100) if total_semua > 0 else 0
+        st.markdown(buat_kartu("🌴", format_angka(total_sawit), "SAWIT", f"{pct:.1f}%"), 
+                    unsafe_allow_html=True)
+    with c3:
+        pct = (total_karet/total_semua*100) if total_semua > 0 else 0
+        st.markdown(buat_kartu("🌳", format_angka(total_karet), "KARET", f"{pct:.1f}%"), 
+                    unsafe_allow_html=True)
+    with c4:
+        pct = (total_kopi/total_semua*100) if total_semua > 0 else 0
+        st.markdown(buat_kartu("☕", format_angka(total_kopi), "KOPI", f"{pct:.1f}%"), 
+                    unsafe_allow_html=True)
+    
+    c5, c6, c7, c8 = st.columns(4)
+    with c5:
+        st.markdown(buat_kartu("🥥", format_angka(total_kelapa), "KELAPA", ""), 
+                    unsafe_allow_html=True)
+    with c6:
+        st.markdown(buat_kartu("🍫", format_angka(total_kakao), "KAKAO", ""), 
+                    unsafe_allow_html=True)
+    with c7:
+        st.markdown(buat_kartu("🍵", format_angka(total_teh), "TEH", ""), 
+                    unsafe_allow_html=True)
+    with c8:
+        st.markdown(buat_kartu("🎋", format_angka(total_tebu), "TEBU", ""), 
+                    unsafe_allow_html=True)
     
     st.markdown("---")
+    
     st.subheader("📋 Preview Data")
     n_prev = st.slider("Jumlah baris:", 5, len(df), 10, 1, key="prev")
     st.dataframe(df.head(n_prev), use_container_width=True, hide_index=True)
@@ -670,24 +776,30 @@ elif page == "📊 Page 1: Overview":
     
     st.markdown("---")
     st.subheader("📦 Box Plot Distribusi")
-    df_melt = df.melt(id_vars=['Provinsi'], value_vars=KOMODITAS, var_name='Komoditas', value_name='Produksi')
+    df_melt = df.melt(id_vars=['Provinsi'], value_vars=KOMODITAS, 
+                      var_name='Komoditas', value_name='Produksi')
     fig_box = px.box(df_melt, x='Komoditas', y='Produksi', color='Komoditas',
-                     color_discrete_map=WARNA_KOMODITAS, title="Distribusi per Komoditas")
+                     color_discrete_map=WARNA_KOMODITAS, 
+                     title="Distribusi per Komoditas")
     fig_box = apply_tema(fig_box, "Distribusi Produksi", 500)
     fig_box.update_layout(showlegend=False)
     st.plotly_chart(fig_box, use_container_width=True)
 
 
 # ============================================================
-# PAGE 2: DATA CLEANING
+# HALAMAN: PAGE 2 - DATA CLEANING
 # ============================================================
 elif page == "🧹 Page 2: Data Cleaning":
-    st.markdown('<div class="page-header"><h2>🧹 Data Cleaning & Preprocessing</h2><p>Pembersihan data</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "🧹", "Data Cleaning & Preprocessing", "Pembersihan dan persiapan data"
+    ), unsafe_allow_html=True)
     
+    # Missing values
     st.subheader("1️⃣ Missing Values")
     miss = df_raw.isnull().sum()
     miss_df = pd.DataFrame({
-        'Kolom': miss.index, 'Jumlah': miss.values, 
+        'Kolom': miss.index, 
+        'Jumlah': miss.values, 
         'Persentase': (miss.values/len(df_raw))*100
     })
     st.dataframe(miss_df, use_container_width=True, hide_index=True)
@@ -696,101 +808,116 @@ elif page == "🧹 Page 2: Data Cleaning":
         st.success("✅ Dataset bersih, tidak ada missing values!")
     
     st.markdown("---")
+    
+    # Duplikasi
     st.subheader("2️⃣ Duplikasi")
     n_dup = df_raw.duplicated().sum()
-    st.info(f"Jumlah duplikat: **{n_dup}**")
+    info_dup = "Jumlah duplikat: <b>" + str(n_dup) + "</b>"
+    st.markdown(buat_info_box(info_dup), unsafe_allow_html=True)
     if n_dup == 0:
         st.success("✅ Tidak ada duplikasi")
     
     st.markdown("---")
+    
+    # Outlier detection
     st.subheader("3️⃣ Deteksi Outlier (IQR)")
     out_data = []
     for k in KOMODITAS:
         s = df[k]
-        q1, q3 = s.quantile(0.25), s.quantile(0.75)
+        q1 = s.quantile(0.25)
+        q3 = s.quantile(0.75)
         iqr = q3 - q1
-        lo, hi = q1 - 1.5*iqr, q3 + 1.5*iqr
+        lo = q1 - 1.5 * iqr
+        hi = q3 + 1.5 * iqr
         n_out = int(((s < lo) | (s > hi)).sum())
-        out_data.append({'Komoditas': LABEL_KOMODITAS[k], 'Q1': q1, 'Q3': q3, 'IQR': iqr, 'Outlier': n_out})
+        out_data.append({
+            'Komoditas': LABEL_KOMODITAS[k], 
+            'Q1': q1, 'Q3': q3, 
+            'IQR': iqr, 'Outlier': n_out
+        })
     st.dataframe(pd.DataFrame(out_data).round(2), use_container_width=True, hide_index=True)
     
-    st.markdown("""
-    <div class="info-box">
-        <b>📝 Catatan:</b> Outlier pada data ini umumnya <b>bukan error</b> tetapi provinsi produsen utama 
-        (Riau untuk Kelapa Sawit, Jawa Timur untuk Tebu).
-    </div>
-    """, unsafe_allow_html=True)
+    catatan_outlier = """
+    <b>📝 Catatan:</b> Outlier pada data ini umumnya <b>bukan error</b> 
+    tetapi provinsi produsen utama (Riau untuk Kelapa Sawit, Jawa Timur untuk Tebu).
+    """
+    st.markdown(buat_info_box(catatan_outlier), unsafe_allow_html=True)
     
     st.markdown("---")
+    
+    # Feature Engineering
     st.subheader("4️⃣ Feature Engineering")
     st.markdown("Kolom baru yang ditambahkan:")
-    st.dataframe(df[['Provinsi', 'Wilayah', 'Total_Produksi', 'Rank_Produksi', 'Komoditas_Dominan', 'HHI_Index', 'Diversifikasi']].head(15), 
-                 use_container_width=True, hide_index=True)
+    st.dataframe(
+        df[['Provinsi', 'Wilayah', 'Total_Produksi', 'Rank_Produksi', 
+            'Komoditas_Dominan', 'HHI_Index', 'Diversifikasi']].head(15), 
+        use_container_width=True, hide_index=True
+    )
 
 
 # ============================================================
-# PAGE 3: EDA & 3D
+# HALAMAN: PAGE 3 - EDA & 3D
 # ============================================================
 elif page == "📈 Page 3: EDA & 3D":
-    st.markdown('<div class="page-header"><h2>📈 EDA & 3D Visualizations</h2><p>4 visualisasi 3D interaktif</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "📈", "EDA & 3D Visualizations", "4 visualisasi 3D interaktif"
+    ), unsafe_allow_html=True)
     
     # --- VIZ 3D #1: SCATTER 3D ---
     st.subheader("🧊 VIZ #1: Scatter 3D")
     c1, c2, c3 = st.columns(3)
-    with c1: ax_x = st.selectbox("Sumbu X:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], key="s3x")
-    with c2: ax_y = st.selectbox("Sumbu Y:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], index=2, key="s3y")
-    with c3: ax_z = st.selectbox("Sumbu Z:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], index=3, key="s3z")
+    with c1:
+        ax_x = st.selectbox("Sumbu X:", KOMODITAS, 
+                           format_func=lambda x: LABEL_KOMODITAS[x], key="s3x")
+    with c2:
+        ax_y = st.selectbox("Sumbu Y:", KOMODITAS, 
+                           format_func=lambda x: LABEL_KOMODITAS[x], index=2, key="s3y")
+    with c3:
+        ax_z = st.selectbox("Sumbu Z:", KOMODITAS, 
+                           format_func=lambda x: LABEL_KOMODITAS[x], index=3, key="s3z")
     
-    color_by = st.radio("Warna:", ["Wilayah", "Komoditas_Dominan", "Diversifikasi"], horizontal=True)
+    color_by = st.radio("Warna:", ["Wilayah", "Komoditas_Dominan", "Diversifikasi"], 
+                        horizontal=True)
     
     fig_s3 = px.scatter_3d(df, x=ax_x, y=ax_y, z=ax_z, color=color_by,
                            size='Total_Produksi', size_max=35, hover_name='Provinsi',
                            color_discrete_map=WARNA_WILAYAH if color_by == "Wilayah" else None,
-                           opacity=0.85, title=f"Scatter 3D: {ax_x} vs {ax_y} vs {ax_z}")
-    fig_s3 = apply_tema(fig_s3, f"Scatter 3D: {LABEL_KOMODITAS[ax_x]} × {LABEL_KOMODITAS[ax_y]} × {LABEL_KOMODITAS[ax_z]}", 680)
+                           opacity=0.85)
+    title_s3 = "Scatter 3D: " + LABEL_KOMODITAS[ax_x] + " x " + LABEL_KOMODITAS[ax_y] + " x " + LABEL_KOMODITAS[ax_z]
+    fig_s3 = apply_tema(fig_s3, title_s3, 680)
     st.plotly_chart(fig_s3, use_container_width=True)
     
     st.markdown("---")
     
-    # --- VIZ 3D #2: SURFACE PLOT (FIXED!) ---
+    # --- VIZ 3D #2: SURFACE PLOT ---
     st.subheader("🏔️ VIZ #2: Surface Plot (Topografi)")
     n_surf = st.slider("Jumlah provinsi:", 5, min(30, len(df)), 15, 1, key="surf_n")
-    colorscale_surf = st.selectbox("Colorscale:", ['Viridis', 'Plasma', 'Inferno', 'Magma', 'Turbo', 'Jet', 'Portland', 'RdBu'], key="cs_surf")
+    colorscale_surf = st.selectbox("Colorscale:", 
+                                   ['Viridis', 'Plasma', 'Inferno', 'Magma', 'Turbo', 'Jet'], 
+                                   key="cs_surf")
     
-    # Ambil top N provinsi
     df_surf = df.nlargest(n_surf, 'Total_Produksi').set_index('Provinsi')[KOMODITAS]
     Z_matrix = df_surf.values.astype(float)
     
-    # Pastikan Z_matrix valid
-    if Z_matrix.size == 0 or np.any(np.isnan(Z_matrix)):
-        st.warning("Data tidak valid untuk surface plot")
-    else:
-        # Buat ticks
+    if Z_matrix.size > 0 and not np.any(np.isnan(Z_matrix)):
         x_ticks = list(range(len(KOMODITAS)))
         y_ticks = list(range(len(df_surf)))
-        x_labels = [LABEL_KOMODITAS[k].split()[-1] for k in KOMODITAS]  # Hanya nama komoditas
+        x_labels = [LABEL_KOMODITAS[k] for k in KOMODITAS]
         y_labels = [str(p)[:14] for p in df_surf.index]
         
-        # Buat Surface plot dengan parameter SIMPLE (tanpa contours yang kompleks)
+        # Surface plot sederhana tanpa parameter kompleks
         fig_surf = go.Figure(data=[go.Surface(
             z=Z_matrix,
             x=x_ticks,
             y=y_ticks,
             colorscale=colorscale_surf,
             opacity=0.92,
-            colorbar=dict(
-                title="Produksi",
-                tickfont=dict(color="white", size=11),
-                titlefont=dict(color="white", size=12)
-            ),
-            hovertemplate='<b>%{customdata[0]}</b><br>%{customdata[1]}: %{z:,.0f}<extra></extra>',
-            customdata=np.array([[(y_labels[i], x_labels[j]) for j in range(len(x_labels))] for i in range(len(y_labels))])
+            colorbar=dict(title="Produksi")
         )])
         
-        # Layout sederhana
+        title_surf = "Topografi Produksi Top " + str(n_surf) + " Provinsi"
         fig_surf.update_layout(
-            title=dict(text=f"🗻 Topografi Produksi Top {n_surf} Provinsi", 
-                      font=dict(size=18, color="#58d68d"), x=0.5),
+            title=dict(text=title_surf, font=dict(size=18, color="#58d68d"), x=0.5),
             paper_bgcolor="rgba(0, 0, 0, 0)",
             font=dict(color="#e8f5e9", family="Inter"),
             height=680,
@@ -803,8 +930,7 @@ elif page == "📈 Page 3: EDA & 3D":
                     tickangle=-45,
                     backgroundcolor="rgb(10, 31, 20)",
                     gridcolor="rgba(46, 204, 113, 0.2)",
-                    color="#e8f5e9",
-                    titlefont=dict(color="#2ecc71", size=13)
+                    color="#e8f5e9"
                 ),
                 yaxis=dict(
                     title='Provinsi',
@@ -812,33 +938,27 @@ elif page == "📈 Page 3: EDA & 3D":
                     ticktext=y_labels,
                     backgroundcolor="rgb(10, 31, 20)",
                     gridcolor="rgba(46, 204, 113, 0.2)",
-                    color="#e8f5e9",
-                    titlefont=dict(color="#2ecc71", size=13)
+                    color="#e8f5e9"
                 ),
                 zaxis=dict(
                     title='Produksi (ribu ton)',
                     backgroundcolor="rgb(10, 31, 20)",
                     gridcolor="rgba(46, 204, 113, 0.2)",
-                    color="#e8f5e9",
-                    titlefont=dict(color="#f1c40f", size=13)
+                    color="#e8f5e9"
                 ),
                 camera=dict(eye=dict(x=1.5, y=1.5, z=1.0))
             )
         )
         st.plotly_chart(fig_surf, use_container_width=True)
         
-        # Insight
+        # Insight puncak
         max_idx = np.unravel_index(np.argmax(Z_matrix), Z_matrix.shape)
-        st.markdown(f"""
-        <div class="insight-box">
-            <b>🏔️ Puncak Tertinggi:</b> {y_labels[max_idx[0]]} - {x_labels[max_idx[1]]}: 
-            <b>{Z_matrix[max_idx]:,.0f} ribu ton</b>
-        </div>
-        """, unsafe_allow_html=True)
+        puncak_text = "🏔️ Puncak Tertinggi: <b>" + y_labels[max_idx[0]] + "</b> - <b>" + x_labels[max_idx[1]] + "</b>: " + format_angka(Z_matrix[max_idx]) + " ribu ton"
+        st.markdown(buat_insight_box("", puncak_text), unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # --- VIZ 3D #3: 3D BAR (MESH) ---
+    # --- VIZ 3D #3: 3D BAR CHART ---
     st.subheader("🏗️ VIZ #3: 3D Bar Chart")
     n_bar = st.slider("Jumlah provinsi:", 5, 20, 10, 1, key="bar_n")
     df_bar = df.nlargest(n_bar, 'Total_Produksi')[['Provinsi', 'Total_Produksi']].reset_index(drop=True)
@@ -846,12 +966,16 @@ elif page == "📈 Page 3: EDA & 3D":
     fig_bar = go.Figure()
     colors_bar = ['#f1c40f', '#f39c12', '#e67e22', '#d35400', '#e74c3c', '#c0392b',
                   '#9b59b6', '#8e44ad', '#3498db', '#2980b9', '#1abc9c', '#16a085',
-                  '#27ae60', '#2ecc71', '#58d68d', '#a3d155', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800']
+                  '#27ae60', '#2ecc71', '#58d68d', '#a3d155', '#cddc39', '#ffeb3b', 
+                  '#ffc107', '#ff9800']
     
     for i, row in df_bar.iterrows():
-        x0, x1 = i - 0.4, i + 0.4
-        y0, y1 = 0, 0.8
-        z0, z1 = 0, row['Total_Produksi']
+        x0 = i - 0.4
+        x1 = i + 0.4
+        y0 = 0
+        y1 = 0.8
+        z0 = 0
+        z1 = row['Total_Produksi']
         
         fig_bar.add_trace(go.Mesh3d(
             x=[x0, x1, x1, x0, x0, x1, x1, x0],
@@ -861,26 +985,36 @@ elif page == "📈 Page 3: EDA & 3D":
             j=[1, 2, 5, 6, 1, 5, 3, 7, 2, 6, 3, 5],
             k=[2, 3, 6, 7, 5, 4, 7, 6, 3, 7, 5, 4],
             color=colors_bar[i % len(colors_bar)],
-            opacity=0.88, flatshading=True,
-            name=row['Provinsi'],
-            hovertext=f"<b>{row['Provinsi']}</b><br>#{i+1}<br>{row['Total_Produksi']:,.0f}",
-            hoverinfo='text'
+            opacity=0.88,
+            flatshading=True,
+            name=row['Provinsi']
         ))
     
+    title_bar = "Top " + str(n_bar) + " Provinsi"
     fig_bar.update_layout(
-        title=dict(text=f"🏛️ Top {n_bar} Provinsi", font=dict(size=18, color="#58d68d"), x=0.5),
-        paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e8f5e9"), height=650,
+        title=dict(text=title_bar, font=dict(size=18, color="#58d68d"), x=0.5),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e8f5e9"),
+        height=650,
         margin=dict(l=20, r=20, t=60, b=20),
         showlegend=False,
         scene=dict(
-            xaxis=dict(title='Provinsi', tickvals=list(range(n_bar)),
-                      ticktext=[(n[:11]+'..') if len(n)>11 else n for n in df_bar['Provinsi']],
-                      tickangle=-30, backgroundcolor="rgb(10, 31, 20)",
-                      gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9"),
+            xaxis=dict(
+                title='Provinsi',
+                tickvals=list(range(n_bar)),
+                ticktext=[(n[:11]+'..') if len(n)>11 else n for n in df_bar['Provinsi']],
+                tickangle=-30,
+                backgroundcolor="rgb(10, 31, 20)",
+                gridcolor="rgba(46, 204, 113, 0.2)",
+                color="#e8f5e9"
+            ),
             yaxis=dict(visible=False),
-            zaxis=dict(title='Total Produksi', backgroundcolor="rgb(10, 31, 20)",
-                      gridcolor="rgba(46, 204, 113, 0.2)", color="#e8f5e9",
-                      titlefont=dict(color="#f1c40f")),
+            zaxis=dict(
+                title='Total Produksi',
+                backgroundcolor="rgb(10, 31, 20)",
+                gridcolor="rgba(46, 204, 113, 0.2)",
+                color="#e8f5e9"
+            ),
             camera=dict(eye=dict(x=1.8, y=-1.8, z=1.0))
         )
     )
@@ -902,8 +1036,8 @@ elif page == "📈 Page 3: EDA & 3D":
     fig_bub = px.scatter_3d(df_bub, x='Dom_Ratio', y='HHI_Index', z='Total_Produksi',
                             color='Wilayah', size='Total_Produksi', size_max=50,
                             hover_name='Provinsi', color_discrete_map=WARNA_WILAYAH,
-                            opacity=0.8, title="Diversifikasi 3D")
-    fig_bub = apply_tema(fig_bub, "🎈 Dominansi × HHI × Total Produksi", 680)
+                            opacity=0.8)
+    fig_bub = apply_tema(fig_bub, "🎈 Dominansi x HHI x Total Produksi", 680)
     fig_bub.update_layout(scene=dict(
         xaxis_title='Dominance Ratio (%)',
         yaxis_title='HHI Index',
@@ -913,31 +1047,38 @@ elif page == "📈 Page 3: EDA & 3D":
 
 
 # ============================================================
-# PAGE 3b: PETA
+# HALAMAN: PAGE 3b - PETA
 # ============================================================
 elif page == "🗺️ Page 3b: Peta":
-    st.markdown('<div class="page-header"><h2>🗺️ Peta Distribusi Indonesia</h2><p>Visualisasi geospasial</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "🗺️", "Peta Distribusi Indonesia", "Visualisasi geospasial"
+    ), unsafe_allow_html=True)
     
     df_peta = df.dropna(subset=['Latitude', 'Longitude']).copy()
     
     st.subheader("🌏 Peta #1: Bubble Map per Komoditas")
     k_peta = st.selectbox("Komoditas:", ['Total_Produksi'] + KOMODITAS,
-                         format_func=lambda x: "🌾 Total" if x == 'Total_Produksi' else LABEL_KOMODITAS[x])
+                         format_func=lambda x: "Total" if x == 'Total_Produksi' else LABEL_KOMODITAS[x])
     
     fig_g1 = px.scatter_geo(df_peta, lat='Latitude', lon='Longitude',
                             color=k_peta, size=k_peta, size_max=45,
                             hover_name='Provinsi', scope='asia',
                             color_continuous_scale='Greens',
-                            projection='natural earth',
-                            title=f"Distribusi {k_peta}")
+                            projection='natural earth')
     fig_g1.update_geos(
         showcountries=True, countrycolor="rgba(46, 204, 113, 0.4)",
         showcoastlines=True, coastlinecolor="#2ecc71",
         showland=True, landcolor="rgba(26, 77, 46, 0.45)",
         showocean=True, oceancolor="rgba(8, 25, 15, 0.95)",
-        lataxis_range=[-12, 7], lonaxis_range=[93, 144], bgcolor='rgba(0,0,0,0)'
+        lataxis_range=[-12, 7], lonaxis_range=[93, 144], 
+        bgcolor='rgba(0,0,0,0)'
     )
-    fig_g1.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e8f5e9"), height=680)
+    fig_g1.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        font=dict(color="#e8f5e9"), 
+        height=680,
+        title=dict(text="Distribusi " + str(k_peta), font=dict(color="#58d68d", size=18), x=0.5)
+    )
     st.plotly_chart(fig_g1, use_container_width=True)
     
     st.markdown("---")
@@ -952,11 +1093,15 @@ elif page == "🗺️ Page 3b: Peta":
         showcoastlines=True, coastlinecolor="#2ecc71",
         showland=True, landcolor="rgba(26, 77, 46, 0.45)",
         showocean=True, oceancolor="rgba(8, 25, 15, 0.95)",
-        lataxis_range=[-12, 7], lonaxis_range=[93, 144], bgcolor='rgba(0,0,0,0)'
+        lataxis_range=[-12, 7], lonaxis_range=[93, 144],
+        bgcolor='rgba(0,0,0,0)'
     )
-    fig_g2.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e8f5e9"),
-                         height=680, title=dict(text="Distribusi per Wilayah", 
-                         font=dict(color="#58d68d", size=18), x=0.5))
+    fig_g2.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        font=dict(color="#e8f5e9"),
+        height=680,
+        title=dict(text="Distribusi per Wilayah", font=dict(color="#58d68d", size=18), x=0.5)
+    )
     st.plotly_chart(fig_g2, use_container_width=True)
     
     st.markdown("---")
@@ -972,18 +1117,26 @@ elif page == "🗺️ Page 3b: Peta":
         showcoastlines=True, coastlinecolor="#2ecc71",
         showland=True, landcolor="rgba(26, 77, 46, 0.45)",
         showocean=True, oceancolor="rgba(8, 25, 15, 0.95)",
-        lataxis_range=[-12, 7], lonaxis_range=[93, 144], bgcolor='rgba(0,0,0,0)'
+        lataxis_range=[-12, 7], lonaxis_range=[93, 144],
+        bgcolor='rgba(0,0,0,0)'
     )
-    fig_g3.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e8f5e9"), height=650,
-                         title=dict(text="Komoditas Dominan per Provinsi", font=dict(color="#58d68d", size=18), x=0.5))
+    fig_g3.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        font=dict(color="#e8f5e9"), 
+        height=650,
+        title=dict(text="Komoditas Dominan per Provinsi", 
+                   font=dict(color="#58d68d", size=18), x=0.5)
+    )
     st.plotly_chart(fig_g3, use_container_width=True)
 
 
 # ============================================================
-# PAGE 4: KORELASI
+# HALAMAN: PAGE 4 - KORELASI
 # ============================================================
 elif page == "🔗 Page 4: Korelasi":
-    st.markdown('<div class="page-header"><h2>🔗 Analisis Korelasi & Regresi</h2><p>Hubungan antar variabel</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "🔗", "Analisis Korelasi & Regresi", "Hubungan antar variabel"
+    ), unsafe_allow_html=True)
     
     # Heatmap
     st.subheader("🔥 Matriks Korelasi Pearson")
@@ -1004,29 +1157,44 @@ elif page == "🔗 Page 4: Korelasi":
     # Analisis detail
     st.subheader("🔬 Analisis Detail")
     c1, c2 = st.columns(2)
-    with c1: v1 = st.selectbox("Variabel X:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], key="cx")
-    with c2: v2 = st.selectbox("Variabel Y:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], index=2, key="cy")
+    with c1:
+        v1 = st.selectbox("Variabel X:", KOMODITAS, 
+                         format_func=lambda x: LABEL_KOMODITAS[x], key="cx")
+    with c2:
+        v2 = st.selectbox("Variabel Y:", KOMODITAS, 
+                         format_func=lambda x: LABEL_KOMODITAS[x], index=2, key="cy")
     
     r, p = do_corr(df[v1].values, df[v2].values)
     int_kor = interpretasi_korelasi(r)
     
     c1, c2, c3 = st.columns(3)
-    with c1: st.markdown(buat_kartu("📐", f"{r:+.3f}", "PEARSON r", int_kor), unsafe_allow_html=True)
-    with c2: st.markdown(buat_kartu("🎯", f"{p:.4f}" if p >= 0.0001 else "<0.0001", "P-VALUE", "α=0.05"), unsafe_allow_html=True)
-    with c3: st.markdown(buat_kartu("💎", f"{r**2:.3f}", "R²", f"{r**2*100:.1f}% variasi"), unsafe_allow_html=True)
+    with c1:
+        st.markdown(buat_kartu("📐", f"{r:+.3f}", "PEARSON r", int_kor), 
+                    unsafe_allow_html=True)
+    with c2:
+        p_disp = f"{p:.4f}" if p >= 0.0001 else "<0.0001"
+        st.markdown(buat_kartu("🎯", p_disp, "P-VALUE", "alpha=0.05"), 
+                    unsafe_allow_html=True)
+    with c3:
+        r2_val = r**2
+        st.markdown(buat_kartu("💎", f"{r2_val:.3f}", "R-Squared", 
+                               f"{r2_val*100:.1f}% variasi"), 
+                    unsafe_allow_html=True)
     
-    # Scatter 2D
+    # Scatter 2D dengan trendline
     fig_sc = px.scatter(df, x=v1, y=v2, color='Wilayah', size='Total_Produksi',
                        hover_name='Provinsi', color_discrete_map=WARNA_WILAYAH,
                        trendline='ols')
-    fig_sc = apply_tema(fig_sc, f"{LABEL_KOMODITAS[v1]} vs {LABEL_KOMODITAS[v2]}", 550)
+    title_sc = LABEL_KOMODITAS[v1] + " vs " + LABEL_KOMODITAS[v2]
+    fig_sc = apply_tema(fig_sc, title_sc, 550)
     st.plotly_chart(fig_sc, use_container_width=True)
     
     st.markdown("---")
     
-    # Regresi
+    # Model Regresi
     st.subheader("🤖 Model Regresi Linier")
-    target = st.selectbox("Target:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], index=0, key="reg_t")
+    target = st.selectbox("Target:", KOMODITAS, 
+                         format_func=lambda x: LABEL_KOMODITAS[x], index=0, key="reg_t")
     fitur = [k for k in KOMODITAS if k != target]
     
     X = df[fitur].values
@@ -1043,26 +1211,37 @@ elif page == "🔗 Page 4: Korelasi":
     
     mae = do_mae(y_te, y_pred)
     rmse = do_rmse(y_te, y_pred)
-    r2 = do_r2(y_te, y_pred)
+    r2_val = do_r2(y_te, y_pred)
     mape = do_mape(y_te, y_pred)
     
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(buat_kartu("📏", f"{mae:.2f}", "MAE", ""), unsafe_allow_html=True)
-    with c2: st.markdown(buat_kartu("📐", f"{rmse:.2f}", "RMSE", ""), unsafe_allow_html=True)
-    with c3: st.markdown(buat_kartu("🎯", f"{r2:.4f}", "R²", interpretasi_r2(r2)), unsafe_allow_html=True)
-    with c4: st.markdown(buat_kartu("📊", f"{mape:.1f}%", "MAPE", ""), unsafe_allow_html=True)
+    with c1:
+        st.markdown(buat_kartu("📏", f"{mae:.2f}", "MAE", ""), unsafe_allow_html=True)
+    with c2:
+        st.markdown(buat_kartu("📐", f"{rmse:.2f}", "RMSE", ""), unsafe_allow_html=True)
+    with c3:
+        int_r2 = interpretasi_r2(r2_val)
+        st.markdown(buat_kartu("🎯", f"{r2_val:.4f}", "R-SQUARED", int_r2), 
+                    unsafe_allow_html=True)
+    with c4:
+        st.markdown(buat_kartu("📊", f"{mape:.1f}%", "MAPE", ""), unsafe_allow_html=True)
     
     # Actual vs Predicted
     fig_avp = go.Figure()
-    fig_avp.add_trace(go.Scatter(x=y_te, y=y_pred, mode='markers',
-                                 marker=dict(size=12, color='#2ecc71', line=dict(color='#f1c40f', width=2)),
-                                 name='Test'))
+    fig_avp.add_trace(go.Scatter(
+        x=y_te, y=y_pred, mode='markers',
+        marker=dict(size=12, color='#2ecc71', line=dict(color='#f1c40f', width=2)),
+        name='Test'
+    ))
     mn = min(y_te.min(), y_pred.min())
     mx = max(y_te.max(), y_pred.max())
-    fig_avp.add_trace(go.Scatter(x=[mn, mx], y=[mn, mx], mode='lines',
-                                 line=dict(color='#e74c3c', width=2, dash='dash'),
-                                 name='Perfect'))
-    fig_avp = apply_tema(fig_avp, f"Actual vs Predicted: {LABEL_KOMODITAS[target]}", 500)
+    fig_avp.add_trace(go.Scatter(
+        x=[mn, mx], y=[mn, mx], mode='lines',
+        line=dict(color='#e74c3c', width=2, dash='dash'),
+        name='Perfect'
+    ))
+    title_avp = "Actual vs Predicted: " + LABEL_KOMODITAS[target]
+    fig_avp = apply_tema(fig_avp, title_avp, 500)
     fig_avp.update_layout(xaxis_title='Aktual', yaxis_title='Prediksi')
     st.plotly_chart(fig_avp, use_container_width=True)
     
@@ -1072,16 +1251,20 @@ elif page == "🔗 Page 4: Korelasi":
         'Fitur': [LABEL_KOMODITAS[f] for f in fitur],
         'Koefisien': mdl.coef_
     }).sort_values('Koefisien', key=abs, ascending=False)
-    st.dataframe(coef_df.style.format({'Koefisien': '{:.4f}'}), use_container_width=True, hide_index=True)
+    st.dataframe(coef_df.style.format({'Koefisien': '{:.4f}'}), 
+                 use_container_width=True, hide_index=True)
 
 
 # ============================================================
-# PAGE 4b: ML LANJUTAN
+# HALAMAN: PAGE 4b - ML LANJUTAN
 # ============================================================
 elif page == "🤖 Page 4b: ML Lanjutan":
-    st.markdown('<div class="page-header"><h2>🤖 ML Lanjutan</h2><p>Perbandingan model</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "🤖", "ML Lanjutan", "Perbandingan model"
+    ), unsafe_allow_html=True)
     
-    target_ml = st.selectbox("Target:", KOMODITAS, format_func=lambda x: LABEL_KOMODITAS[x], key="ml_t")
+    target_ml = st.selectbox("Target:", KOMODITAS, 
+                            format_func=lambda x: LABEL_KOMODITAS[x], key="ml_t")
     fitur_ml = [k for k in KOMODITAS if k != target_ml]
     
     if SKLEARN_OK:
@@ -1119,37 +1302,55 @@ elif page == "🤖 Page 4b: ML Lanjutan":
             'Model': nama,
             'MAE': do_mae(y_te, pred),
             'RMSE': do_rmse(y_te, pred),
-            'R²': do_r2(y_te, pred),
-            'MAPE %': do_mape(y_te, pred)
+            'R-Squared': do_r2(y_te, pred),
+            'MAPE_Persen': do_mape(y_te, pred)
         })
     
-    hasil_df = pd.DataFrame(hasil).sort_values('R²', ascending=False)
+    hasil_df = pd.DataFrame(hasil).sort_values('R-Squared', ascending=False)
+    
+    # Tampilkan tabel dengan styling manual (hindari highlight yang bermasalah)
     st.dataframe(
-        hasil_df.style.highlight_max(subset=['R²'], color='#2ecc71')
-                .highlight_min(subset=['MAE', 'RMSE', 'MAPE %'], color='#2ecc71')
-                .format({'MAE': '{:.3f}', 'RMSE': '{:.3f}', 'R²': '{:.4f}', 'MAPE %': '{:.2f}'}),
-        use_container_width=True, hide_index=True
+        hasil_df.style.format({
+            'MAE': '{:.3f}', 
+            'RMSE': '{:.3f}', 
+            'R-Squared': '{:.4f}', 
+            'MAPE_Persen': '{:.2f}'
+        }),
+        use_container_width=True, 
+        hide_index=True
     )
     
     best = hasil_df.iloc[0]
-    st.success(f"### 🏆 Model Terbaik: {best['Model']}\n- **R²:** `{best['R²']:.4f}`\n- **MAE:** `{best['MAE']:.3f}`")
+    success_text = "### 🏆 Model Terbaik: " + str(best['Model']) + "\n\n"
+    success_text += "- **R-Squared:** `" + f"{best['R-Squared']:.4f}" + "`\n"
+    success_text += "- **MAE:** `" + f"{best['MAE']:.3f}" + "`"
+    st.success(success_text)
     
+    # Bar chart perbandingan
     fig_cmp = go.Figure()
-    fig_cmp.add_trace(go.Bar(x=hasil_df['Model'], y=hasil_df['R²'],
-                             marker_color='#2ecc71',
-                             text=hasil_df['R²'].round(3), textposition='outside',
-                             textfont=dict(color='#58d68d')))
-    fig_cmp = apply_tema(fig_cmp, f"Perbandingan R² (Target: {LABEL_KOMODITAS[target_ml]})", 450)
-    fig_cmp.update_layout(xaxis_title='Model', yaxis_title='R² Score')
+    fig_cmp.add_trace(go.Bar(
+        x=hasil_df['Model'], 
+        y=hasil_df['R-Squared'],
+        marker_color='#2ecc71',
+        text=hasil_df['R-Squared'].round(3), 
+        textposition='outside',
+        textfont=dict(color='#58d68d')
+    ))
+    title_cmp = "Perbandingan R-Squared (Target: " + LABEL_KOMODITAS[target_ml] + ")"
+    fig_cmp = apply_tema(fig_cmp, title_cmp, 450)
+    fig_cmp.update_layout(xaxis_title='Model', yaxis_title='R-Squared Score')
     st.plotly_chart(fig_cmp, use_container_width=True)
 
 
 # ============================================================
-# PAGE 5: INSIGHTS
+# HALAMAN: PAGE 5 - INSIGHTS
 # ============================================================
 elif page == "💡 Page 5: Insights":
-    st.markdown('<div class="page-header"><h2>💡 Insights & Rekomendasi</h2><p>Kesimpulan analisis</p></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header(
+        "💡", "Insights & Rekomendasi", "Kesimpulan analisis"
+    ), unsafe_allow_html=True)
     
+    # Hitung statistik utama
     top_prov = df.loc[df['Kelapa_Sawit'].idxmax(), 'Provinsi']
     top_val = df['Kelapa_Sawit'].max()
     pct_sawit = df['Kelapa_Sawit'].sum() / df['Total_Produksi'].sum() * 100
@@ -1157,92 +1358,90 @@ elif page == "💡 Page 5: Insights":
     gini = hitung_gini(df['Total_Produksi'])
     
     st.subheader("📋 Ringkasan")
-    st.markdown(f"""
-    <div class="info-box">
-        <ul>
-            <li>🌴 Kelapa Sawit: <b>{pct_sawit:.1f}%</b> dari total produksi</li>
-            <li>🏆 <b>{top_prov}</b> produsen sawit terbesar ({top_val:,.0f} ribu ton)</li>
-            <li>🗺️ <b>Wilayah {top_wil}</b> sentra produksi utama</li>
-            <li>⚖️ Gini Index: <b>{gini:.3f}</b> ({'Timpang' if gini > 0.5 else 'Sedang'})</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    ringkasan_html = "<ul>"
+    ringkasan_html += "<li>🌴 Kelapa Sawit: <b>" + f"{pct_sawit:.1f}%" + "</b> dari total produksi</li>"
+    ringkasan_html += "<li>🏆 <b>" + str(top_prov) + "</b> produsen sawit terbesar (" + format_angka(top_val) + " ribu ton)</li>"
+    ringkasan_html += "<li>🗺️ <b>Wilayah " + str(top_wil) + "</b> sentra produksi utama</li>"
+    gini_label = "Timpang" if gini > 0.5 else "Sedang"
+    ringkasan_html += "<li>⚖️ Gini Index: <b>" + f"{gini:.3f}" + "</b> (" + gini_label + ")</li>"
+    ringkasan_html += "</ul>"
+    st.markdown(buat_info_box(ringkasan_html), unsafe_allow_html=True)
     
     st.markdown("---")
     st.subheader("🔍 5 Insight Mendalam")
     
-    insights = [
-        ("Dominasi Kelapa Sawit", f"Kelapa Sawit menyumbang {pct_sawit:.1f}% produksi nasional dengan {top_prov} sebagai produsen utama. Ketergantungan pada satu komoditas menciptakan risiko ekonomi."),
-        ("Ketimpangan Produksi", f"Gini {gini:.3f} menunjukkan ketimpangan tinggi. Top 5 provinsi menguasai >55% total produksi nasional."),
-        ("Spesialisasi Regional", "Sumatera-Kalimantan dominan Sawit, Jawa unggul di Tebu & Teh, Sulawesi sentra Kakao."),
-        ("Diversifikasi Rendah", "Banyak provinsi memiliki HHI tinggi, rentan terhadap fluktuasi harga komoditas tertentu."),
-        ("Potensi Indonesia Timur", "Maluku, Papua, NTT berpotensi besar namun kontribusi masih minim.")
-    ]
+    # Insight 1
+    isi_1 = "Kelapa Sawit menyumbang " + f"{pct_sawit:.1f}%" + " produksi nasional dengan " + str(top_prov) + " sebagai produsen utama. Ketergantungan pada satu komoditas menciptakan risiko ekonomi terhadap fluktuasi harga CPO global."
+    st.markdown(buat_insight_box(1, "Dominasi Kelapa Sawit", isi_1), unsafe_allow_html=True)
     
-    for i, (t, c) in enumerate(insights, 1):
-        st.markdown(f"""<div class="insight-box">
-            <strong>💡 Insight #{i}: {t}</strong>
-            <p style="margin:8px 0 0 0;">{c}</p>
-        </div>""", unsafe_allow_html=True)
+    # Insight 2
+    isi_2 = "Gini " + f"{gini:.3f}" + " menunjukkan ketimpangan tinggi. Top 5 provinsi menguasai lebih dari 55% total produksi nasional."
+    st.markdown(buat_insight_box(2, "Ketimpangan Produksi", isi_2), unsafe_allow_html=True)
+    
+    # Insight 3
+    isi_3 = "Sumatera-Kalimantan dominan Sawit, Jawa unggul di Tebu dan Teh, Sulawesi sentra Kakao."
+    st.markdown(buat_insight_box(3, "Spesialisasi Regional", isi_3), unsafe_allow_html=True)
+    
+    # Insight 4
+    isi_4 = "Banyak provinsi memiliki HHI tinggi, rentan terhadap fluktuasi harga komoditas tertentu."
+    st.markdown(buat_insight_box(4, "Diversifikasi Rendah", isi_4), unsafe_allow_html=True)
+    
+    # Insight 5
+    isi_5 = "Maluku, Papua, NTT berpotensi besar namun kontribusi masih minim."
+    st.markdown(buat_insight_box(5, "Potensi Indonesia Timur", isi_5), unsafe_allow_html=True)
     
     st.markdown("---")
     st.subheader("🎯 5 Rekomendasi Implementatif")
     
-    rekomendasi = [
-        ("Diversifikasi Komoditas", "Tumpang sari sawit dengan kakao/kopi. Insentif fiskal untuk komoditas alternatif."),
-        ("Infrastruktur Indonesia Timur", "Jalan, pelabuhan, cold storage di Papua, Maluku, NTT."),
-        ("Sertifikasi Sustainability", "Percepatan ISPO 100% untuk sawit. Sistem traceability blockchain."),
-        ("Digitalisasi Sistem Informasi", "Dashboard real-time, IoT monitoring, early warning system."),
-        ("Hilirisasi Produk", "Industri pengolahan di sentra produksi. Branding kopi specialty dan teh premium.")
-    ]
+    # Rekomendasi 1
+    st.markdown(buat_recommend_box(1, "Diversifikasi Komoditas", 
+                                   "Tumpang sari sawit dengan kakao/kopi. Insentif fiskal untuk komoditas alternatif."), 
+                unsafe_allow_html=True)
     
-    for i, (t, c) in enumerate(rekomendasi, 1):
-        st.markdown(f"""<div class="recommend-box">
-            <strong>🎯 Rekomendasi #{i}: {t}</strong>
-            <p style="margin:8px 0 0 0;">{c}</p>
-        </div>""", unsafe_allow_html=True)
+    # Rekomendasi 2
+    st.markdown(buat_recommend_box(2, "Infrastruktur Indonesia Timur", 
+                                   "Jalan, pelabuhan, cold storage di Papua, Maluku, NTT."), 
+                unsafe_allow_html=True)
+    
+    # Rekomendasi 3
+    st.markdown(buat_recommend_box(3, "Sertifikasi Sustainability", 
+                                   "Percepatan ISPO 100% untuk sawit. Sistem traceability blockchain."), 
+                unsafe_allow_html=True)
+    
+    # Rekomendasi 4
+    st.markdown(buat_recommend_box(4, "Digitalisasi Sistem Informasi", 
+                                   "Dashboard real-time, IoT monitoring, early warning system."), 
+                unsafe_allow_html=True)
+    
+    # Rekomendasi 5
+    st.markdown(buat_recommend_box(5, "Hilirisasi Produk", 
+                                   "Industri pengolahan di sentra produksi. Branding kopi specialty dan teh premium."), 
+                unsafe_allow_html=True)
 
 
 # ============================================================
-# TENTANG
+# HALAMAN: TENTANG
 # ============================================================
 elif page == "ℹ️ Tentang":
-    st.markdown('<div class="page-header"><h2>ℹ️ Tentang Aplikasi</h2></div>', unsafe_allow_html=True)
+    st.markdown(buat_page_header("ℹ️", "Tentang Aplikasi", ""), unsafe_allow_html=True)
     
     st.markdown("""
-    ### ✨ Fitur Utama
-    - 📊 **9 Halaman Analisis** (termasuk Beranda & Tentang)
-    - 🧊 **4 Visualisasi 3D**: Scatter 3D, Surface Plot, Mesh 3D Bar, Bubble 3D
-    - 🗺️ **3 Jenis Peta**: Bubble Map, Wilayah, Dominansi
-    - 🔗 **Korelasi** Pearson & detail uji signifikansi
-    - 🤖 **Multi-Model ML**: Linear, Ridge, Lasso, RF, GB
-    - 💡 **5 Insights + 5 Rekomendasi**
-    - 🛡️ **Fallback Manual** jika sklearn gagal
-    
-    ### 🛠️ Teknologi
-    - Streamlit, Pandas, NumPy, Plotly, scikit-learn, SciPy
-    
-    ### 🚀 Cara Deploy
-    1. Push ke GitHub
-    2. Buka share.streamlit.io
-    3. New App → pilih repository → Deploy
-    
-    ### 📁 Struktur
-    ```
-    📦 dasbor/
-    ├── app.py
-    ├── produksi_tanaman.csv
-    └── requirements.txt
-    ```
-    """)
+### ✨ Fitur Utama
+- 📊 **9 Halaman Analisis** (termasuk Beranda & Tentang)
+- 🧊 **4 Visualisasi 3D**: Scatter 3D, Surface Plot, Mesh 3D Bar, Bubble 3D
+- 🗺️ **3 Jenis Peta**: Bubble Map, Wilayah, Dominansi
+- 🔗 **Korelasi** Pearson & detail uji signifikansi
+- 🤖 **Multi-Model ML**: Linear, Ridge, Lasso, RF, GB
+- 💡 **5 Insights + 5 Rekomendasi**
+- 🛡️ **Fallback Manual** jika sklearn gagal
 
+### 🛠️ Teknologi
+- Streamlit, Pandas, NumPy, Plotly, scikit-learn, SciPy
 
-# ============================================================
-# FOOTER
-# ============================================================
-st.markdown("---")
-st.markdown(f"""
-<div class="app-footer">
-    <p style="font-size:1.2em;font-weight:800;color:#58d68d;">🌿 Dasbor Perkebunan Indonesia 🌾</p>
-    <p>Tugas UAS Visualisasi Data • {APP_YEAR} • v{APP_VERSION}</p>
-</div>
+### 🚀 Cara Deploy
+1. Push ke GitHub
+2. Buka share.streamlit.io
+3. New App → pilih repository → Deploy
+
+### 📁 Struktur
