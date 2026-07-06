@@ -1,8 +1,8 @@
-streamlit==1.36.0
-pandas==2.2.2
-numpy==1.26.4
-plotly==5.22.0
-scikit-learn==1.5.0
-scipy==1.12.0
-python-dateutil==2.8.2
-kaleido==0.2.1
+streamlit
+pandas
+numpy
+plotly
+scikit-learn
+scipy
+python-dateutil
+kaleido
